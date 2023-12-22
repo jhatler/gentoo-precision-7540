@@ -1,4 +1,4 @@
-# Changelog
+# Changelog of Gentoo Setup on Dell Precision 7540
 
 ## 0.0.1 (2023-12-22)
 

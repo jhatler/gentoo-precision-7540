@@ -20,3 +20,341 @@ Goals:
 - [ ] ([#19](https://github.com/jhatler/gentoo-precision-7540/issues/19)) vscode installed
 - [ ] ([#20](https://github.com/jhatler/gentoo-precision-7540/issues/20)) Gentoo Containers for development via catalyst
 
+## BIOS Setup
+
+The BIOS was reset to BIOS Defaults and the following changes were made:
+
+- System Configuration -> Integrated NIC
+  - Enable UEFI Network Stack: Unchecked
+  - Radio Option: Enabled
+- System Configuration -> SATA Operation
+  - Radio Option: AHCI
+- System Configuration -> SMART Reporting
+  - Enable SMART Reporting: Checked
+- System Configuration -> USB Configuration
+  - Enable USB Boot Support: Checked
+  - Enable External USB Port: Checked
+- System Configuration -> Thunderbolt Adapter Configuration
+  - Thunderbolt: Checked
+  - Thunderbolt Boot Support: Checked
+  - Enable Thunderbolt (and PCIe behind TBT) Pre-boot Modules: Checked
+  - Radio Option: No Security
+- System Configuration -> USB PowerShare
+  - Enable USB PowerShare: Checked
+- Video -> Switchable Graphics
+  - Enable Switchable Graphics: Checked
+  - Discrete Graphics Controller: Unchecked
+- Security -> UEFI Capsule Firmware Updates
+  - Enable UEFI Capsule Firmware Updates: Checked
+- Security -> TPM 2.0 Security
+  - TPM On: Checked
+  - Clear: Checked
+  - Attestation Enable: Checked
+  - Key Storage Enable: Checked
+  - SHA-256: Checked
+  - Radio Option: Enabled
+- Security -> Absolute
+  - Radio Option: Disabled
+- Security -> SMM Security Mitigation
+  - SMM Security Mitigation: Checked
+- Secure Boot -> Secure Boot Enable
+  - Secure Boot Enable: Checked
+- Secure Boot -> Secure Boot Mode
+  - Radio Option: Audit Mode
+- Intel Software Guard Extensions -> Intel SGX Enable
+  - Radio Option: Enabled
+- Intel Software Guard Extensions -> Enclave Memory Size
+  - Radio Option: 32 MB
+- Maintenance -> BIOS Recovery
+  - BIOS Recovery from Hard Drive: Unchecked
+- SupportAssist System Resolution -> Auto OS Recovery Threshold
+  - Radio Option: OFF
+- SupportAssist System Resolution -> SupportAssist OS Recovery
+  - SupportAssist OS Recovery: Unchecked
+- SupportAssist System Resolution -> BIOSConnect
+  - BIOSConnect: Unchecked
+
+The system was then rebooted twice to allow the TPM to fully reset.
+
+## Installation Environment Setup
+
+The AMD64 LiveGUI USB Image was downloaded from here: [https://www.gentoo.org/downloads/](https://www.gentoo.org/downloads/)
+
+[Rufus](https://rufus.ie/en/) was used to create a bootable USB drive from the image.
+
+The USB drive was inserted into the laptop and the laptop was powered on.
+
+F12 was pressed to enter the boot menu and the USB drive was selected.
+
+The ```Boot LiveCD (kernel: gentoo)``` option was selected.
+
+Konsole was opened.
+
+A root shell was opened using ```sudo su``` and the Wi-Fi was connected to using ```nmtui```.
+
+The gentoo repository was updated using the following commands:
+
+```bash
+emerge-webrsync
+emerge --sync
+```
+
+Then the following commands were run to setup SSH access to allow for easier setup:
+
+```bash
+passwd gentoo
+rc-update add sshd default
+/etc/init.d/sshd start
+```
+
+## Disk Setup
+
+The NVME disks were erased using the following commands:
+
+```bash
+wipefs -fa /dev/nvme0n1
+wipefs -fa /dev/nvme1n1
+wipefs -fa /dev/nvme2n1
+```
+
+The desired disk layout is one that is partitioned identically on all three disks.
+This allows for the disks to be used in RAID configurations with less complexity around certain calculations.
+
+RAID1 is desired for the ESP partition. This will be unencrypted.
+
+A separate RAID1 volume is desired for the /boot partition to make it easier to install other distros in the future.
+The /boot partition will be encrypted using LUKS1. GRUB does not support LUKS2 well and this will ensure better
+compatibility with other distros, if needed in the future.
+
+There will be separate paritions for encrypted swap and the LVM volume group for the rest of the data. A LVM on LUKS
+approach will be used to allow for the ability to resize the LVM volume group in the future. BTRFS will be used for
+the root filesystem. RAID will be handled here at the BTRFS level so the filesystem has a better understanding of the
+physical layout of the disks.
+
+They disks were partitioned using the following commands:
+
+```bash
+for _disk in /dev/nvme{0,1,2}n1; do
+  parted -a optimal "$_disk" --script mklabel gpt \
+    mkpart primary 1MiB 2049MiB \
+    mkpart primary 2049MiB 6145MiB \
+    mkpart primary 6145MiB 14377MiB \
+    mkpart primary 14377MiB 100% \
+    set 1 esp on
+done
+```
+
+In order for the ESP partitions to be readable by UEFI, the must use the 1.0 metadata format that places the metadata
+at the end of the parition. The ESP RAID1 was setup using the following command:
+
+```bash
+mdadm --create /dev/md100 --level 1 --raid-disks 3 --metadata 1.0 /dev/nvme{0,1,2}n1p1
+```
+
+The /boot RAID1 was setup using the following commands:
+
+```bash
+mdadm --create /dev/md101 --level 1 --raid-disks 3 --metadata 1.0 /dev/nvme{0,1,2}n1p2
+```
+
+The /boot encrypted LUKS1 partition was setup and formatted using the following commands:
+
+```bash
+cryptsetup luksFormat --type luks1 /dev/md101
+cryptsetup luksOpen /dev/md101 cryptboot
+mkfs.ext4 -L boot /dev/mapper/cryptboot
+```
+
+The encrypted swap partitions were setup, formatted, and activated using the following commands:
+
+```bash
+cryptsetup luksFormat --type luks1 /dev/nvme0n1p3
+cryptsetup luksFormat --type luks1 /dev/nvme1n1p3
+cryptsetup luksFormat --type luks1 /dev/nvme2n1p3
+
+cryptsetup luksOpen /dev/nvme0n1p3 cryptswap0
+cryptsetup luksOpen /dev/nvme1n1p3 cryptswap1
+cryptsetup luksOpen /dev/nvme2n1p3 cryptswap2
+
+mkswap -L swap0 /dev/mapper/cryptswap0
+mkswap -L swap1 /dev/mapper/cryptswap1
+mkswap -L swap2 /dev/mapper/cryptswap2
+
+swapon -L swap0
+swapon -L swap1
+swapon -L swap2
+```
+
+The encrypted LVM volume group was setup and formatted using the following commands:
+
+```bash
+cryptsetup luksFormat --type luks2 /dev/nvme0n1p4
+cryptsetup luksFormat --type luks2 /dev/nvme1n1p4
+cryptsetup luksFormat --type luks2 /dev/nvme2n1p4
+
+cryptsetup luksOpen \
+  --allow-discards \
+  --perf-no_read_workqueue \
+  --perf-no_write_workqueue \
+  --perf-submit_from_crypt_cpus \
+  /dev/nvme0n1p4 cryptdata0
+
+cryptsetup luksOpen \
+  --allow-discards \
+  --perf-no_read_workqueue \
+  --perf-no_write_workqueue \
+  --perf-submit_from_crypt_cpus \
+  /dev/nvme1n1p4 cryptdata1
+
+cryptsetup luksOpen \
+  --allow-discards \
+  --perf-no_read_workqueue \
+  --perf-no_write_workqueue \
+  --perf-submit_from_crypt_cpus \
+  /dev/nvme2n1p4 cryptdata2
+
+pvcreate /dev/mapper/cryptdata0
+pvcreate /dev/mapper/cryptdata1
+pvcreate /dev/mapper/cryptdata2
+
+vgcreate vg0 /dev/mapper/cryptdata{0,1,2}
+```
+
+The rootfs BTRFS RAID1 volume was setup and formatted using the following commands:
+
+```bash
+lvcreate -L 32G -n root0 vg0 /dev/mapper/cryptdata0
+lvcreate -L 32G -n root1 vg0 /dev/mapper/cryptdata1
+lvcreate -L 32G -n root2 vg0 /dev/mapper/cryptdata2
+mkfs.btrfs -d raid1 -m raid1c3 --csum xxhash -n 4096 -L root /dev/mapper/vg0-root{0,1,2}
+```
+
+A thin pool was created for VM data using the following commands:
+
+```bash
+echo 'sys-fs/lvm2 thin' > /etc/portage/package.use/lvm2
+emerge -av sys-fs/lvm2 sys-block/thin-provisioning-tools
+lvcreate -L 768G -i3 -I4m -c 4m -Zn --thinpool thinpool0 vg0 /dev/mapper/cryptdata{0,1,2}
+```
+
+A BTRFS RAID0 volume was created for non-critical data using the following commands:
+
+```bash
+lvcreate -L 128G -n data0 vg0 /dev/mapper/cryptdata0
+lvcreate -L 128G -n data1 vg0 /dev/mapper/cryptdata1
+lvcreate -L 128G -n data2 vg0 /dev/mapper/cryptdata2
+mkfs.btrfs -d raid0 -m raid1 --csum xxhash -n 4096 -L data /dev/mapper/vg0-data{0,1,2}
+```
+
+## Chroot Setup
+
+BTRFS subvolumes were created for the rootfs, home, and select var directories using the following commands:
+
+```bash
+mkdir -p /mnt/btrfs/{root,data}
+mount -t btrfs \
+  -o compress=zstd,discard=async,max_inline=0,space_cache=v2,ssd,commit=120,user_subvol_rm_allowed \
+  /dev/mapper/vg0-root0 /mnt/btrfs/root
+mount -t btrfs \
+  -o compress=zstd,discard=async,max_inline=0,space_cache=v2,ssd,commit=120,user_subvol_rm_allowed \
+  /dev/mapper/vg0-data0 /mnt/btrfs/data
+
+btrfs subvolume create /mnt/btrfs/root/@gentoo
+btrfs subvolume create /mnt/btrfs/data/@gentoo-home
+btrfs subvolume create /mnt/btrfs/data/@gentoo-var-cache
+btrfs subvolume create /mnt/btrfs/data/@gentoo-var-db
+btrfs subvolume create /mnt/btrfs/data/@gentoo-var-log
+btrfs subvolume create /mnt/btrfs/data/@gentoo-var-tmp
+```
+
+The chroot was mounted using the following commands:
+
+```bash
+mkdir /mnt/chroot
+mount -t btrfs \
+  -o compress=zstd,discard=async,max_inline=0,space_cache=v2,ssd,commit=120,user_subvol_rm_allowed,subvol=@gentoo \
+  /dev/mapper/vg0-root0 /mnt/chroot
+
+mkdir /mnt/chroot/boot
+mount /dev/mapper/cryptboot /mnt/chroot/boot
+
+mkdir /mnt/chroot/boot/efi
+mount /dev/md100 /mnt/chroot/boot/efi
+
+mkdir /mnt/chroot/home
+mount -t btrfs \
+  -o compress=zstd,discard=async,max_inline=0,space_cache=v2,ssd,commit=120,user_subvol_rm_allowed,subvol=@gentoo-home \
+  /dev/mapper/vg0-data0 /mnt/chroot/home
+
+mkdir -p /mnt/chroot/var/{cache,db,log,tmp}
+mount -t btrfs \
+  -o compress=zstd,discard=async,max_inline=0,space_cache=v2,ssd,commit=120,user_subvol_rm_allowed,subvol=@gentoo-var-cache \
+  /dev/mapper/vg0-data0 /mnt/chroot/var/cache
+mount -t btrfs \
+  -o compress=zstd,discard=async,max_inline=0,space_cache=v2,ssd,commit=120,user_subvol_rm_allowed,subvol=@gentoo-var-db \
+  /dev/mapper/vg0-data0 /mnt/chroot/var/db
+mount -t btrfs \
+  -o compress=zstd,discard=async,max_inline=0,space_cache=v2,ssd,commit=120,user_subvol_rm_allowed,subvol=@gentoo-var-log \
+  /dev/mapper/vg0-data0 /mnt/chroot/var/log
+mount -t btrfs \
+  -o compress=zstd,discard=async,max_inline=0,space_cache=v2,ssd,commit=120,user_subvol_rm_allowed,subvol=@gentoo-var-tmp \
+  /dev/mapper/vg0-data0 /mnt/chroot/var/tmp
+```
+
+### Stage 3 Install
+
+The ```llvm | systemd | merged-usr``` stage3 tarball link was copied from here:
+[https://www.gentoo.org/downloads/](https://www.gentoo.org/downloads/)
+
+The stage3 tarball was downloaded and verified using the following commands:
+
+```bash
+cd /mnt/chroot
+wget ${STAGE3_URL}
+wget ${STAGE3_URL}.CONTENTS.gz
+wget ${STAGE3_URL}.DIGESTS
+wget ${STAGE3_URL}.sha256
+
+sha256sum --check stage3-amd64-llvm-systemd-mergedusr-*.tar.xz.sha256
+
+openssl dgst -r -sha512 stage3-amd64-llvm-systemd-mergedusr-*.tar.xz
+openssl dgst -r -sha512 stage3-amd64-llvm-systemd-mergedusr-*.tar.xz.CONTENTS.gz
+openssl dgst -r -blake2b512 stage3-amd64-llvm-systemd-mergedusr-*.tar.xz
+openssl dgst -r -blake2b512 stage3-amd64-llvm-systemd-mergedusr-*.tar.xz.CONTENTS.gz
+
+# compare above output to hashes in this file
+cat stage3-amd64-llvm-systemd-mergedusr-*.tar.xz.DIGESTS
+
+gpg --import /usr/share/openpgp-keys/gentoo-release.asc
+gpg --verify stage3-amd64-llvm-systemd-mergedusr-*.tar.xz.asc
+gpg --verify stage3-amd64-llvm-systemd-mergedusr-*.tar.xz.DIGESTS
+gpg --verify stage3-amd64-llvm-systemd-mergedusr-*.tar.xz.sha256
+```
+
+The stage3 tarball was extracted using the following command:
+
+```bash
+tar xpvf stage3-*.tar.xz --xattrs-include='*.*' --numeric-owner
+```
+
+### System Mounts
+
+The mounts needed to open a chroot were setup using the following commands:
+
+```bash
+mount --types proc /proc /mnt/chroot/proc
+mount --rbind /sys /mnt/chroot/sys
+mount --make-rslave /mnt/chroot/sys
+mount --rbind /dev /mnt/chroot/dev
+mount --make-rslave /mnt/chroot/dev
+mount --bind /run /mnt/chroot/run
+mount --make-slave /mnt/chroot/run
+```
+
+### DNS Setup
+
+The chroot DNS was setup using the following commands:
+
+```bash
+cp --dereference /etc/resolv.conf /mnt/chroot/etc/
+```

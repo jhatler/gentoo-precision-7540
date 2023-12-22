@@ -13,3 +13,5 @@
 
 * Add goals and issue refs to README ([#21](https://github.com/jhatler/gentoo-precision-7540/issues/21)) ([057f951](https://github.com/jhatler/gentoo-precision-7540/commit/057f951c440896986ce4e6d187000647a7653664)), closes [#3](https://github.com/jhatler/gentoo-precision-7540/issues/3)
 * Add hwinfo [#2](https://github.com/jhatler/gentoo-precision-7540/issues/2) ([cf92f16](https://github.com/jhatler/gentoo-precision-7540/commit/cf92f16af76a6e39c20634849496c88db7592c8d)), closes [#1](https://github.com/jhatler/gentoo-precision-7540/issues/1)
+
+<!--- @generate --->

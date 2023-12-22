@@ -1,5 +1,13 @@
 # Changelog of Gentoo Setup on Dell Precision 7540
 
+## [0.0.2](https://github.com/jhatler/gentoo-precision-7540/compare/gentoo-precision-7540-v0.0.1...gentoo-precision-7540-v0.0.2) (2023-12-22)
+
+
+### Documentation
+
+* Add changelog title ([#31](https://github.com/jhatler/gentoo-precision-7540/issues/31)) ([3d2f20f](https://github.com/jhatler/gentoo-precision-7540/commit/3d2f20fed6aba57f4882e85e1028a1dad6c23bb2)), closes [#25](https://github.com/jhatler/gentoo-precision-7540/issues/25)
+* Mark changelog as generated ([#29](https://github.com/jhatler/gentoo-precision-7540/issues/29)) ([1c46c3a](https://github.com/jhatler/gentoo-precision-7540/commit/1c46c3a6f140ee0ff4421d6e39c30c6152de4174)), closes [#24](https://github.com/jhatler/gentoo-precision-7540/issues/24)
+
 ## 0.0.1 (2023-12-22)
 
 

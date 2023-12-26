@@ -534,3 +534,93 @@ cache_dir_levels = 4
 EOF
 ```
 
+### Package Testing
+
+The ```test``` feature was added to ```FEATURES``` in ```/etc/portage/make.conf```.
+
+Then, the following commands were run to enable testing for all packages:
+
+```bash
+emerge -avuDU --with-bdeps=y --jobs=32 --load-average=20 @world
+```
+
+Some use changes were needed to get everything to build. The above command was run after each change until
+no more errors were encountered. USE flag changes needed for testing were put in the
+```/etc/portage/package.use/testing``` file.
+
+The non-tivial issues encountered were:
+- app-shells/fish needs the usersandbox feature disabled for tests to pass.
+  - [Gentoo Bug 838187](https://bugs.gentoo.org/838187)
+- The betamax python package was [forked](https://github.com/jhatler/betamax) until the following issues are resolved. The fork was placed in a local repository called ```local```.
+  - [betamax#200](https://github.com/betamaxpy/betamax/issues/200)
+  - [betamax#203](https://github.com/betamaxpy/betamax/issues/203)
+  - [betamax#204](https://github.com/betamaxpy/betamax/issues/204)
+- The ```dev-python/uvloop``` package was copied to the ```local``` repository and the patch found in the below issue was added. The dependency on a pre-v3 version of ```cython``` was removed.
+  - [uvloop#586](https://github.com/MagicStack/uvloop/issues/586)
+- The ```dev-python/autocommand``` package needed patched with the below PR due to the below bug.
+  - [autocommand#31](https://github.com/Lucretiel/autocommand/pull/31)
+  - [Gentoo Bug 917754](https://bugs.gentoo.org/917754)
+- The ```dev-python/cython``` tests failed to pass due to a path traversal error. This was resolved with the patch prodived to the below Gentoo bug.
+  - [Gentoo Bug 912814](https://bugs.gentoo.org/912814)
+- The ```dev-python/inflect``` package had a failing test which was fixed with the patch from the below PR submitted upstream.
+  - [inflect#205](https://github.com/jaraco/inflect/pull/205)
+- The ```dev-python/pytest-mock``` package had failing tests fixed in the below commits which were added as patches to my portage.
+  - [pytest-mock#403](https://github.com/pytest-dev/pytest-mock/pull/403)
+  - [pytest-mock#404](https://github.com/pytest-dev/pytest-mock/pull/404)
+- The ```dev-python/send2trash``` package fails its tests due to bad cross-platform support. The package was copied to the ```local``` repository and a patch was added to add additional checks before importing the mac and windows support.
+- The ```dev-python/terminado``` package had a missing BDEPEND on ```dev-python/pytest-timeout``` needed for testing.
+- The ```dev-python/pytest-virtualenv``` test called ```test_installed_packages``` had to be disabled due to a deprecation warning not expected by the test.
+- The ```dev-python/Faker``` package was copied to the ```local``` repository so the ```test_ssn_without_age_range``` test could be disabled. This test fails due to a bug in the upstream package.
+  - [Faker#1956](https://github.com/joke2k/faker/issues/1956)
+- The ```dev-vcs/mercurial``` package has flaky tests under parallelism, so they were disabled.
+- The tests of the following packages failed in non-concerning ways so I disabled them until I had the energy/time to dig in further.
+  - ```sys-libs/glibc```
+  - ```dev-python/cryptography```
+  - ```dev-python/pypiserver```
+  - ```dev-python/pycurl```
+    - ```curl``` needs downgraded to 8.3.0
+- The tests of ```sys-devel/gcc``` can be idealistic and some failures seem to be commonplace, per the Gentoo Buzilla. A baseline of the test results was prepared using the below command.
+  - ```GCC_TESTS_NO_IGNORE_BASELINE=1 emerge -v1 sys-devel/gcc```
+- ```dev-python/html5lib``` needed the patch in the below PR to be applied for the tests to complete.
+  - [html5lib#570](https://github.com/html5lib/html5lib-python/pull/570/)
+- ```dev-libs/glib``` requires ```dev-util/desktop-file-utils``` to be installed to bypass an ebuild bug which doesn't properly disable the dependent tests.
+  - This command must be used to bypass the circular dependency ```FEATURES="-test" emerge -av dev-util/desktop-file-utils```
+  - ```systemd-machine-id-setup``` must be run before trying  the ```dev-libs/glib``` tests.
+- ```dev-python/Pillow``` needs the following commit applied as a patch for the tests to pass.
+  - [Pillow#7594](https://github.com/python-pillow/Pillow/pull/7594)
+- ```app-accessibility/at-spi2-core``` requires ```app-editors/gedit``` to be installed for the tests to pass.
+  - [Gentoo Bug 678372](https://bugs.gentoo.org/678372)
+- ```dev-util/umockdev``` needs ```x11-apps/xinput``` and ```x11-drivers/xf86-input-synaptics``` for the tests to pass.
+- The below patch from Debian was applied to ```net-libs/libsoup-2.74.3``` to resolve a testing failure recorded in the below bug.
+  - [skip-tls_interaction-test.patch](https://sources.debian.org/data/main/libs/libsoup2.4/2.74.3-2/debian/patches/skip-tls_interaction-test.patch)
+  - [libsoup#120](https://gitlab.gnome.org/GNOME/libsoup/-/issues/120)
+- The ```gnome-base/dconf``` packages is needed for the ```net-libs/uhttpmock``` tests to work.
+- A single test, listed below, was failing on ```dev-python/matplotlib```. It was disabled for now given that package had to disable many tests to work.
+  - ```tests/test_image.py::test_imshow_masked_interpolation[png]```
+
+Once the package testing was complete, the gentoo repository was updated to use git instead of rsync for syncing.
+
+The /var/db/repos/gentoo directory was deleted. Then the ```/etc/portage/repos.conf/gentoo.conf``` file was updated to the below:
+
+```text
+[DEFAULT]
+main-repo = gentoo
+
+[gentoo]
+location = /var/db/repos/gentoo
+sync-type = git
+sync-uri = https://github.com/gentoo/gentoo.git
+auto-sync = yes
+clone-depth = 0
+sync-depth = 0
+sync-openpgp-key-path = /usr/share/openpgp-keys/gentoo-release.asc
+sync-openpgp-keyserver = hkps://keys.gentoo.org
+sync-openpgp-key-refresh-retry-count = 40
+sync-openpgp-key-refresh-retry-overall-timeout = 1200
+sync-openpgp-key-refresh-retry-delay-exp-base = 2
+sync-openpgp-key-refresh-retry-delay-max = 60
+sync-openpgp-key-refresh-retry-delay-mult = 4
+```
+
+A new sync was done by running ```emerge --sync```.
+

@@ -624,3 +624,20 @@ sync-openpgp-key-refresh-retry-delay-mult = 4
 
 A new sync was done by running ```emerge --sync```.
 
+### GCC Optimization
+
+Now that a baseline copy of the GCC tests had been created, the gcc use flags were updated to updated to optimize the build
+and support graphite (isl). This was done by creating the file ```/etc/portage/package.use/gcc``` with the following line:
+
+```text
+>=sys-devel/gcc-13 graphite lto pgo zstd
+```
+
+The the systemd was updated using this command:
+
+```bash
+emerge -avuDU --with-bdeps=y @world
+```
+
+That build took quite a while because it needed to build GCC with both LTO and PGO.
+

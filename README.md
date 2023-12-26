@@ -509,3 +509,28 @@ emerge -avuDU --with-bdeps=y --jobs=32 --load-average=20 @world
 emerge -av --depclean
 ```
 
+### ccache Setup
+
+ccache was installed using the following command:
+
+```bash
+emerge -av dev-util/ccache
+```
+
+The ```ccache``` feature was added to ```FEATURES``` in ```/etc/portage/make.conf```. The ```CCACHE_DIR``` variable
+was set to ```/var/cache/ccache``` in ```/etc/portage/make.conf``` as well.
+
+The ccache cache directory was configured using the following commands:
+
+```bash
+mkdir -p /mnt/chroot/var/cache/ccache
+chown -R portage:portage /mnt/chroot/var/cache/ccache
+cat <<EOF > /mnt/chroot/var/cache/ccache/ccache.conf
+max_size = 64.0G
+umask = 002
+hash_dir = false
+compiler_check = %compiler% -dumpversion
+cache_dir_levels = 4
+EOF
+```
+

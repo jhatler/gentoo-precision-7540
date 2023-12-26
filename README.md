@@ -337,7 +337,7 @@ mount -t btrfs \
 
 ### Stage 3 Install
 
-The ```llvm | systemd | merged-usr``` stage3 tarball link was copied from here:
+The ```systemd | merged-usr``` stage3 tarball link was copied from here:
 [https://www.gentoo.org/downloads/](https://www.gentoo.org/downloads/)
 
 The stage3 tarball was downloaded and verified using the following commands:
@@ -348,21 +348,22 @@ wget ${STAGE3_URL}
 wget ${STAGE3_URL}.CONTENTS.gz
 wget ${STAGE3_URL}.DIGESTS
 wget ${STAGE3_URL}.sha256
+wget ${STAGE3_URL}.asc
 
-sha256sum --check stage3-amd64-llvm-systemd-mergedusr-*.tar.xz.sha256
+sha256sum --check stage3-amd64-systemd-mergedusr-*.tar.xz.sha256
 
-openssl dgst -r -sha512 stage3-amd64-llvm-systemd-mergedusr-*.tar.xz
-openssl dgst -r -sha512 stage3-amd64-llvm-systemd-mergedusr-*.tar.xz.CONTENTS.gz
-openssl dgst -r -blake2b512 stage3-amd64-llvm-systemd-mergedusr-*.tar.xz
-openssl dgst -r -blake2b512 stage3-amd64-llvm-systemd-mergedusr-*.tar.xz.CONTENTS.gz
+openssl dgst -r -sha512 stage3-amd64-systemd-mergedusr-*.tar.xz
+openssl dgst -r -sha512 stage3-amd64-systemd-mergedusr-*.tar.xz.CONTENTS.gz
+openssl dgst -r -blake2b512 stage3-amd64-systemd-mergedusr-*.tar.xz
+openssl dgst -r -blake2b512 stage3-amd64-systemd-mergedusr-*.tar.xz.CONTENTS.gz
 
 # compare above output to hashes in this file
-cat stage3-amd64-llvm-systemd-mergedusr-*.tar.xz.DIGESTS
+cat stage3-amd64-systemd-mergedusr-*.tar.xz.DIGESTS
 
 gpg --import /usr/share/openpgp-keys/gentoo-release.asc
-gpg --verify stage3-amd64-llvm-systemd-mergedusr-*.tar.xz.asc
-gpg --verify stage3-amd64-llvm-systemd-mergedusr-*.tar.xz.DIGESTS
-gpg --verify stage3-amd64-llvm-systemd-mergedusr-*.tar.xz.sha256
+gpg --verify stage3-amd64-systemd-mergedusr-*.tar.xz.asc
+gpg --verify stage3-amd64-systemd-mergedusr-*.tar.xz.DIGESTS
+gpg --verify stage3-amd64-systemd-mergedusr-*.tar.xz.sha256
 ```
 
 The stage3 tarball was extracted using the following command:

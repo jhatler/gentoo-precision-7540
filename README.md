@@ -393,3 +393,119 @@ The chroot DNS was setup using the following commands:
 ```bash
 cp --dereference /etc/resolv.conf /mnt/chroot/etc/
 ```
+
+
+## Bootstrapping
+
+Bootstrapping the system consists of installing the portage tree, configuring portage, setting the profile, and
+updating the system, and the rebuilding everything twice to ensure all packages are built with the latest compiler.
+
+After the initial update is completed, the GentooLTO overlay will be used as a reference to enable LTO and other
+optimizations. Doing this before the bootstrap will minimize the number of world rebuilds needed.
+Package testing needs enabled to ensure there are no issues with the packages being built.
+
+ccache will also be setup to speed up rebuilds.
+
+### Locale Setup
+
+The following lines were uncommented in ```/mnt/chroot/etc/locale.gen```:
+
+```text
+en_US ISO-8859-1
+en_US.UTF-8 UTF-8
+```
+
+Then ```locale-gen``` was run within the chroot to generate the locales.
+
+### Portage Tree
+
+Mirrors were selected using the following command:
+
+```bash
+mirrorselect -i -o >> /mnt/chroot/etc/portage/make.conf
+```
+
+The portage tree was configured using the following commands:
+
+```bash
+mkdir --parents /mnt/chroot/etc/portage/repos.conf
+cp /mnt/chroot/usr/share/portage/config/repos.conf /mnt/chroot/etc/portage/repos.conf/gentoo.conf
+```
+
+The portage tree was synced using the following commands:
+
+```bash
+chroot /mnt/chroot
+emerge-webrsync
+emerge --sync
+```
+
+### Portage Configuration
+
+The ```/etc/portage/make.conf``` file was updated in the chroot to the following:
+
+```bash
+
+## LTO Settings
+
+## Use Flags
+USE=""
+
+## Compilter Settings
+COMMON_FLAGS="-march=skylake -O2 -pipe"
+CFLAGS="${COMMON_FLAGS}"
+CXXFLAGS="${COMMON_FLAGS}"
+FCFLAGS="${COMMON_FLAGS}"
+FFLAGS="${COMMON_FLAGS}"
+
+CHOST="x86_64-pc-linux-gnu"
+
+CPU_FLAGS_X86="aes avx avx2 f16c fma3 mmx mmxext pclmul popcnt rdrand sse sse2 sse3 sse4_1 sse4_2 ssse3"
+
+CMAKE_MAKEFILE_GENERATOR=ninja
+
+MAKEOPTS="-j20"
+
+## Directory Settings
+PORTDIR="/var/db/repos/gentoo"
+DISTDIR="/var/cache/distfiles"
+PKGDIR="/var/cache/binpkgs"
+
+## Mirror List
+GENTOO_MIRRORS="https://mirrors.rit.edu/gentoo/"
+
+## Locale Settings
+LC_MESSAGES=C.utf8
+L10N="en"
+
+## ACCEPT Settings
+ACCEPT_KEYWORDS="amd64"
+ACCEPT_LICENSE="-* @FREE"
+
+## Logging
+PORTAGE_ELOG_CLASSES="info warn error log qa"
+PORTAGE_ELOG_SYSTEM="echo save"
+
+## Portage Features
+FEATURES="binpkg-logs binpkg-multi-instance buildpkg candy ccache parallel-fetch parallel-install preserve-libs split-elog split-log test unmerge-logs"
+PORTAGE_NICENESS=15
+CCACHE_DIR=/var/cache/ccache
+```
+
+### Profile
+
+The ```default/linux/amd64/17.1/systemd/merged-usr``` profile was selected using the following command:
+
+```bash
+eselect profile set default/linux/amd64/17.1/systemd/merged-usr
+```
+
+### System Update
+
+The system was updated using the following commands:
+
+```bash
+emerge -avuDU --with-bdeps=y --jobs=32 --load-average=20 @world
+emerge -av --depclean
+```
+

@@ -3,10 +3,10 @@
 Goals:
 
 - [ ] ([#4](https://github.com/jhatler/gentoo-precision-7540/issues/4)) Gentoo installed
-- [ ] ([#5](https://github.com/jhatler/gentoo-precision-7540/issues/5)) LUKS full disk encryption with performance tuning
-- [ ] ([#6](https://github.com/jhatler/gentoo-precision-7540/issues/6)) BTRFS raid0 for rootfs
-- [ ] ([#7](https://github.com/jhatler/gentoo-precision-7540/issues/7)) Striped LVM for VMs and other filesystems
-- [ ] ([#8](https://github.com/jhatler/gentoo-precision-7540/issues/8)) Ability to reallocate space between BTRFS and LVM
+- [X] ([#5](https://github.com/jhatler/gentoo-precision-7540/issues/5)) LUKS full disk encryption with performance tuning
+- [X] ([#6](https://github.com/jhatler/gentoo-precision-7540/issues/6)) BTRFS raid0 for rootfs
+- [X] ([#7](https://github.com/jhatler/gentoo-precision-7540/issues/7)) Striped LVM for VMs and other filesystems
+- [X] ([#8](https://github.com/jhatler/gentoo-precision-7540/issues/8)) Ability to reallocate space between BTRFS and LVM
 - [ ] ([#9](https://github.com/jhatler/gentoo-precision-7540/issues/9)) BTRFS snapshots for rollback integrated into emerge
 - [ ] ([#10](https://github.com/jhatler/gentoo-precision-7540/issues/10)) System optimized with LTO, Graphite, PGO, and CFLAGS
 - [ ] ([#11](https://github.com/jhatler/gentoo-precision-7540/issues/11)) systemd-boot configured with secure boot
@@ -106,6 +106,40 @@ passwd gentoo
 rc-update add sshd default
 /etc/init.d/sshd start
 ```
+
+## LUKS Performance testing
+
+LUKS vs. Direct disk access was tested using FIO. 4MiB blocks were used to test the sequential read/write performance
+and 4KiB blocks were used to test the random read/write performance. A single NVME disk was used for the tests. The 
+results are summarized below:
+
+| Test Type | Queues Enabled | Submit from Crypt CPUs | Jobs | Random IO | Read (MiB/s) | Write (MiB/s) |
+|-----------|----------------|------------------------|------|-----------|--------------|---------------|
+| Direct    | #N/A           | #N/A                   | 1    | FALSE     | 1414.305713  | 1412.039197   |
+| Direct    | #N/A           | #N/A                   | 16   | FALSE     | 2712.619886  | 2721.282936   |
+| Direct    | #N/A           | #N/A                   | 1    | TRUE      | 133.6726561  | 133.4808588   |
+| Direct    | #N/A           | #N/A                   | 16   | TRUE      | 754.250453   | 754.6367817   |
+| Encrypted | FALSE          | TRUE                   | 1    | FALSE     | 758.4574871  | 762.5904074   |
+| Encrypted | FALSE          | FALSE                  | 1    | FALSE     | 665.4001265  | 674.0659266   |
+| Encrypted | TRUE           | TRUE                   | 1    | FALSE     | 601.8466043  | 615.5794802   |
+| Encrypted | TRUE           | FALSE                  | 1    | FALSE     | 498.8501911  | 515.51408     |
+| Encrypted | FALSE          | TRUE                   | 16   | FALSE     | 2678.650202  | 2683.852674   |
+| Encrypted | FALSE          | FALSE                  | 16   | FALSE     | 2657.468244  | 2670.798386   |
+| Encrypted | TRUE           | TRUE                   | 16   | FALSE     | 2666.266011  | 2677.458804   |
+| Encrypted | TRUE           | FALSE                  | 16   | FALSE     | 2646.007566  | 2655.478645   |
+| Encrypted | FALSE          | TRUE                   | 1    | TRUE      | 112.1937857  | 112.0448322   |
+| Encrypted | FALSE          | FALSE                  | 1    | TRUE      | 109.5733004  | 109.4292946   |
+| Encrypted | TRUE           | TRUE                   | 1    | TRUE      | 100.8804913  | 100.6935177   |
+| Encrypted | TRUE           | FALSE                  | 1    | TRUE      | 96.65823555  | 96.48545551   |
+| Encrypted | FALSE          | TRUE                   | 16   | TRUE      | 750.838645   | 751.2814436   |
+| Encrypted | FALSE          | FALSE                  | 16   | TRUE      | 753.6204519  | 754.012641    |
+| Encrypted | TRUE           | TRUE                   | 16   | TRUE      | 850.8773651  | 851.1699362   |
+| Encrypted | TRUE           | FALSE                  | 16   | TRUE      | 882.7599688  | 883.0642529   |
+
+Based on these results, the following flags were selected for the LUKS setup:
+- ```--perf-no_read_workqueue```
+- ```--perf-no_write_workqueue```
+- ```--perf-submit_from_crypt_cpus```
 
 ## Disk Setup
 

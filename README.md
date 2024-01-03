@@ -2,13 +2,13 @@
 
 Goals:
 
-- [ ] ([#4](https://github.com/jhatler/gentoo-precision-7540/issues/4)) Gentoo installed
+- [X] ([#4](https://github.com/jhatler/gentoo-precision-7540/issues/4)) Gentoo installed
 - [X] ([#5](https://github.com/jhatler/gentoo-precision-7540/issues/5)) LUKS full disk encryption with performance tuning
 - [X] ([#6](https://github.com/jhatler/gentoo-precision-7540/issues/6)) BTRFS raid0 for rootfs
 - [X] ([#7](https://github.com/jhatler/gentoo-precision-7540/issues/7)) Striped LVM for VMs and other filesystems
 - [X] ([#8](https://github.com/jhatler/gentoo-precision-7540/issues/8)) Ability to reallocate space between BTRFS and LVM
 - [ ] ([#9](https://github.com/jhatler/gentoo-precision-7540/issues/9)) BTRFS snapshots for rollback integrated into emerge
-- [ ] ([#10](https://github.com/jhatler/gentoo-precision-7540/issues/10)) System optimized with LTO, Graphite, PGO, and CFLAGS
+- [X] ([#10](https://github.com/jhatler/gentoo-precision-7540/issues/10)) System optimized with LTO, Graphite, PGO, and CFLAGS
 - [ ] ([#11](https://github.com/jhatler/gentoo-precision-7540/issues/11)) systemd-boot configured with secure boot
 - [ ] ([#12](https://github.com/jhatler/gentoo-precision-7540/issues/12)) Nvidia GPU working with CUDA and vGPU support
 - [ ] ([#13](https://github.com/jhatler/gentoo-precision-7540/issues/13)) KVM configured with virt-manager and libvirt support

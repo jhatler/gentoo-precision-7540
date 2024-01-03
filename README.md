@@ -154,7 +154,8 @@ wipefs -fa /dev/nvme2n1
 The desired disk layout is one that is partitioned identically on all three disks.
 This allows for the disks to be used in RAID configurations with less complexity around certain calculations.
 
-RAID1 is desired for the ESP partition. This will be unencrypted.
+Data replication is desired for the ESP partition. This will be unencrypted and implemented via a systemd timer
+later in the setup process.
 
 A separate RAID1 volume is desired for the /boot partition to make it easier to install other distros in the future.
 The /boot partition will be encrypted using LUKS1. GRUB does not support LUKS2 well and this will ensure better
@@ -178,24 +179,25 @@ for _disk in /dev/nvme{0,1,2}n1; do
 done
 ```
 
-In order for the ESP partitions to be readable by UEFI, the must use the 1.0 metadata format that places the metadata
-at the end of the parition. The ESP RAID1 was setup using the following command:
+The ESP partitions were setup using the following commands:
 
 ```bash
-mdadm --create /dev/md100 --level 1 --raid-disks 3 --metadata 1.0 /dev/nvme{0,1,2}n1p1
+mkfs.vfat -F32 -n esp0 /dev/nvme0n1p1
+mkfs.vfat -F32 -n esp1 /dev/nvme1n1p1
+mkfs.vfat -F32 -n esp2 /dev/nvme2n1p1
 ```
 
 The /boot RAID1 was setup using the following commands:
 
 ```bash
-mdadm --create /dev/md101 --level 1 --raid-disks 3 --metadata 1.0 /dev/nvme{0,1,2}n1p2
+mdadm --create /dev/md127 --name=cryptboot:luks --level 1 --raid-disks 3 --metadata 1.0 /dev/nvme{0,1,2}n1p2
 ```
 
 The /boot encrypted LUKS1 partition was setup and formatted using the following commands:
 
 ```bash
-cryptsetup luksFormat --type luks1 /dev/md101
-cryptsetup luksOpen /dev/md101 cryptboot
+cryptsetup luksFormat --type luks1 /dev/md127
+cryptsetup luksOpen /dev/md127 cryptboot
 mkfs.ext4 -L boot /dev/mapper/cryptboot
 ```
 
@@ -312,8 +314,10 @@ mount -t btrfs \
 mkdir /mnt/chroot/boot
 mount /dev/mapper/cryptboot /mnt/chroot/boot
 
-mkdir /mnt/chroot/boot/efi
-mount /dev/md100 /mnt/chroot/boot/efi
+mkdir /mnt/chroot/boot/efi{,.nvme1n1,.nvme2n1}
+mount /dev/nvme0n1p1 /mnt/chroot/boot/efi
+mount /dev/nvme1n1p1 /mnt/chroot/boot/efi.nvme1n1
+mount /dev/nvme2n1p1 /mnt/chroot/boot/efi.nvme2n1
 
 mkdir /mnt/chroot/home
 mount -t btrfs \

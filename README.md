@@ -568,7 +568,7 @@ GCC_TESTS_NO_IGNORE_BASELINE=1 emerge -av1 sys-devel/gcc
 
 That also creates a baseline copy of the GCC tests to be compared against later.
 
-### Bootstrapping
+### Finalizing the Bootstrap
 
 The ```test``` feature is enabled in /etc/portage which means there will be many circular dependencies that need
 to be addressed as part of bootstrapping.
@@ -645,7 +645,7 @@ dispatch-conf
 
 Then dependencies should be cleaned up and another rebuild performed.
 
-```
+```bash
 emerge -av --depclean
 emerge -av --emptytree --with-bdeps=y --jobs=32 --load-average=20 @world
 ```
@@ -780,7 +780,7 @@ rd.luks.name=[UUID of /dev/nvme2n1p4]=cryptdata2
 
 Finally, the cmdline should be ended with the following settings to specify the root filesystem location and mount flags.
 
-```
+```text
 root=/dev/mapper/vg0-root0 rootflags=compress=zstd,discard=async,max_inline=0,space_cache=v2,ssd,commit=120,user_subvol_rm_allowed,subvol=@gentoo
 ```
 

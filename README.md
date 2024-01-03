@@ -556,6 +556,18 @@ cd /var/db/repos/lto-overlay
 git checkout workaroundCleanup # this branch is needed until the cleanup is complete
 ```
 
+### GCC Optimization
+
+The cloned portage configuration enabled optimizations for GCC which need built before other packages can be optimized.
+
+This was done by running the below command:
+
+```bash
+GCC_TESTS_NO_IGNORE_BASELINE=1 emerge -av1 sys-devel/gcc
+```
+
+That also creates a baseline copy of the GCC tests to be compared against later.
+
 
 ```bash
 emerge -avuDU --with-bdeps=y --jobs=32 --load-average=20 @world

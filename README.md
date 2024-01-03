@@ -799,10 +799,31 @@ Now that dracut is configured, a UKI image can be created using the command belo
 emerge --config sys-kernel/gentoo-kernel-bin
 ```
 
+### Rebooting
+
+A shell was opened outside of the chroot and the following commands were run to unmount and close everything:
 
 ```bash
-emerge -avuDU --with-bdeps=y @world
+umount -R /mnt/chroot
+umount /mnt/btrfs/root
+umount /mnt/btrfs/data
+swapoff -a
+cryptsetup close /dev/mapper/cryptboot
+mdadm --stop /dev/md127
+cryptsetup close /dev/mapper/cryptswap0
+cryptsetup close /dev/mapper/cryptswap1
+cryptsetup close /dev/mapper/cryptswap2
+vgchange -an vg0
+cryptsetup close /dev/mapper/cryptdata0
+cryptsetup close /dev/mapper/cryptdata1
+cryptsetup close /dev/mapper/cryptdata2
 ```
 
-That build took quite a while because it needed to build GCC with both LTO and PGO.
+The system was rebooted using the following command:
 
+```bash
+reboot
+```
+
+Once the UKI image boots, you will be prompted for the LUKS passphrase. Keeping the same passphrase for each LUKS volume will
+allow for it to be entered once and used for all volumes.

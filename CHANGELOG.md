@@ -1,5 +1,18 @@
 # Changelog of Gentoo Setup on Dell Precision 7540
 
+## [0.0.3](https://github.com/jhatler/gentoo-precision-7540/compare/gentoo-precision-7540-v0.0.2...gentoo-precision-7540-v0.0.3) (2024-01-03)
+
+
+### Bug Fixes
+
+* Fix typo in [@generated](https://github.com/generated) comment in CHANGELOG ([#32](https://github.com/jhatler/gentoo-precision-7540/issues/32)) ([4fffb08](https://github.com/jhatler/gentoo-precision-7540/commit/4fffb087d98e780571a9b7012fa038d4ada20eb1))
+
+
+### Documentation
+
+* Add bootstrapping and LTO instructions ([#35](https://github.com/jhatler/gentoo-precision-7540/issues/35)) ([d59266a](https://github.com/jhatler/gentoo-precision-7540/commit/d59266aed4d3dfd4f9236869063f2ae18e373a34))
+* Add disk and chroot setup instructions ([#34](https://github.com/jhatler/gentoo-precision-7540/issues/34)) ([02a1a82](https://github.com/jhatler/gentoo-precision-7540/commit/02a1a825805ad235f1ef5e85009fdb036f082cdd))
+
 ## [0.0.2](https://github.com/jhatler/gentoo-precision-7540/compare/gentoo-precision-7540-v0.0.1...gentoo-precision-7540-v0.0.2) (2023-12-22)
 
 

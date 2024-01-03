@@ -110,7 +110,7 @@ rc-update add sshd default
 ## LUKS Performance testing
 
 LUKS vs. Direct disk access was tested using FIO. 4MiB blocks were used to test the sequential read/write performance
-and 4KiB blocks were used to test the random read/write performance. A single NVME disk was used for the tests. The 
+and 4KiB blocks were used to test the random read/write performance. A single NVME disk was used for the tests. The
 results are summarized below:
 
 | Test Type | Queues Enabled | Submit from Crypt CPUs | Jobs | Random IO | Read (MiB/s) | Write (MiB/s) |
@@ -592,9 +592,9 @@ This is needed by some packages to build.
 systemd-machine-id-setup
 ```
 
-```dev-libs/glib``` requires ```dev-util/desktop-file-utils``` to be installed to bypass an ebuild bug which doesn't properly disable the dependent tests. 
+```dev-libs/glib``` requires ```dev-util/desktop-file-utils``` to be installed to bypass an ebuild bug which doesn't properly disable the dependent tests.
 
-```app-accessibility/at-spi2-core``` requires ```app-editors/gedit``` to be installed for the tests to pass ([Gentoo Bug 678372](https://bugs.gentoo.org/678372)). 
+```app-accessibility/at-spi2-core``` requires ```app-editors/gedit``` to be installed for the tests to pass ([Gentoo Bug 678372](https://bugs.gentoo.org/678372)).
 
 ```dev-util/umockdev``` needs ```x11-apps/xinput``` and ```x11-drivers/xf86-input-synaptics``` for the tests to pass.
 
@@ -790,7 +790,7 @@ The complete string comprising of the above three sections needs to be on a sing
 ```text
 uefi="yes"
 add_dracutmodules+=" bash btrfs crypt dm lvm mdraid systemd rescue rootfs-block "
-kernel_cmdline="[COMBINDED CMDLINE]"  
+kernel_cmdline="[COMBINDED CMDLINE]"
 ```
 
 Now that dracut is configured, a UKI image can be created using the command below:

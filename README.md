@@ -568,14 +568,105 @@ GCC_TESTS_NO_IGNORE_BASELINE=1 emerge -av1 sys-devel/gcc
 
 That also creates a baseline copy of the GCC tests to be compared against later.
 
+### Bootstrapping
+
+The ```test``` feature is enabled in /etc/portage which means there will be many circular dependencies that need
+to be addressed as part of bootstrapping.
+
+The following command was run iteratively.
 
 ```bash
 emerge -avuDU --with-bdeps=y --jobs=32 --load-average=20 @world
 ```
 
-Some use changes were needed to get everything to build. The above command was run after each change until
-no more errors were encountered. USE flag changes needed for testing were put in the
-```/etc/portage/package.use/testing``` file.
+Each time a circular dependency was encountered, the packages with the interdepdencies were built with the following command:
+
+```bash
+FEATURES=-test emerge -av1 [PACKAGES] ...
+```
+
+Once all the circular test dependencies were built, the following command was run to generate a machine ID for systemd.
+This is needed by some packages to build.
+
+```bash
+systemd-machine-id-setup
+```
+
+```dev-libs/glib``` requires ```dev-util/desktop-file-utils``` to be installed to bypass an ebuild bug which doesn't properly disable the dependent tests. 
+
+```app-accessibility/at-spi2-core``` requires ```app-editors/gedit``` to be installed for the tests to pass ([Gentoo Bug 678372](https://bugs.gentoo.org/678372)). 
+
+```dev-util/umockdev``` needs ```x11-apps/xinput``` and ```x11-drivers/xf86-input-synaptics``` for the tests to pass.
+
+The ```gnome-base/dconf``` packages is needed for the ```net-libs/uhttpmock``` tests to work.
+
+All of these were installed using the below command:
+
+```bash
+FEATURES="-test" emerge -av dev-util/desktop-file-utils \
+  app-editors/gedit \
+  x11-apps/xinput \
+  x11-drivers/xf86-input-synaptics \
+  gnome-base/dconf
+```
+
+Then the system set was build once with tests enabled.
+
+```bash
+emerge -ave --with-bdeps=y --jobs=32 --load-average=20 @system
+```
+
+This gets the system to a point where the world set can be updated to point to the copy in /etc/portage from GitHub.
+
+```bash
+rm -f /var/lib/portage/world*
+ln -s /etc/portage/world /var/lib/portage/world
+ln -s /etc/portage/world_sets /var/lib/portage/world_sets
+```
+
+The system is in a state here where can be fully bootstrapped. Before doing that, we create a timestamp file.
+This will be used later to verify that all executables and libraries have been rebuilt.
+
+```bash
+touch /tmp/prebuild_checkpoint
+```
+
+The first world rebuild can now be done with this command.
+
+```bash
+emerge -av --emptytree --with-bdeps=y --jobs=32 --load-average=20 @world
+```
+
+Once it is complete, any configuration changes installed from the emerge should be applied with this command.
+
+```bash
+dispatch-conf
+```
+
+Then dependencies should be cleaned up and another rebuild performed.
+
+```
+emerge -av --depclean
+emerge -av --emptytree --with-bdeps=y --jobs=32 --load-average=20 @world
+```
+
+Using the helpful instructions from Sakaki's unmaintained EFI Install Guide, the following commands were run to
+verify that the bootstrap is complete.
+[See here for more details.](https://wiki.gentoo.org/wiki/User:Sakaki/Sakaki%27s_EFI_Install_Guide/Building_the_Gentoo_Base_System_Minus_Kernel)
+
+```bash
+emerge -av --depclean
+
+# below command checks for executables that are older than the checkpoint file
+# It should produce no output
+find / -type d -path /boot/efi -prune -o -path /proc -prune -o -type f -executable -not -newer /tmp/prebuild_checkpoint -print0 2>/dev/null | xargs -0 file --no-pad --separator="@@@" | grep -iv '@@@.* text'
+
+
+# below command checks the libraries which may have been missed above
+# It should also produce no output
+find / -type d -path /boot/efi -prune -o -path /proc -prune -o -type f -not -executable -not -newer /tmp/prebuild_checkpoint -print0 2>/dev/null | xargs -0 file --no-pad --separator="@@@" | grep '@@@.*\( ELF\| ar archive\)'
+```
+
 
 The non-tivial issues encountered were:
 - app-shells/fish needs the usersandbox feature disabled for tests to pass.

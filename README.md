@@ -404,7 +404,7 @@ cp --dereference /etc/resolv.conf /mnt/chroot/etc/
 Bootstrapping the system consists of installing the portage tree, configuring portage, setting the profile, and
 updating the system, and the rebuilding everything twice to ensure all packages are built with the latest compiler.
 
-After the initial update is completed, the GentooLTO overlay will be used as a reference to enable LTO and other
+After the initial update is completed, the GentooLTO overlay will be used to enable LTO and other
 optimizations. Doing this before the bootstrap will minimize the number of world rebuilds needed.
 Package testing needs enabled to ensure there are no issues with the packages being built.
 
@@ -421,7 +421,7 @@ en_US.UTF-8 UTF-8
 
 Then ```locale-gen``` was run within the chroot to generate the locales.
 
-### Portage Tree
+### Initial Portage Tree
 
 Mirrors were selected using the following command:
 
@@ -444,7 +444,7 @@ emerge-webrsync
 emerge --sync
 ```
 
-### Portage Configuration
+### Initial Portage Configuration
 
 The ```/etc/portage/make.conf``` file was updated in the chroot to the following:
 
@@ -538,11 +538,24 @@ cache_dir_levels = 4
 EOF
 ```
 
-### Package Testing
+### Full Portage Setup
 
-The ```test``` feature was added to ```FEATURES``` in ```/etc/portage/make.conf```.
+Git was installed so the /etc/portage directory could cloned from jhatler/jhatler-etc-portage.
 
-Then, the following commands were run to enable testing for all packages:
+```bash
+emerge -av dev-vcs/git
+```
+
+The /etc/portage directory was cloned using the following commands:
+
+```bash
+rm -rf /etc/portage /var/db/repos/*
+git clone https://github.com/jhatler/jhatler-etc-portage /etc/portage
+emerge --sync # will take a while to clone everything
+cd /var/db/repos/lto-overlay
+git checkout workaroundCleanup # this branch is needed until the cleanup is complete
+```
+
 
 ```bash
 emerge -avuDU --with-bdeps=y --jobs=32 --load-average=20 @world
